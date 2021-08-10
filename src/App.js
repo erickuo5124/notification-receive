@@ -44,7 +44,6 @@ function App() {
   const sendData = async (data) => {
     await fetch(`${process.env.REACT_APP_MAIN_HOST}/add`,
       {
-        mode: 'no-cors',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
