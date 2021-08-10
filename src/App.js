@@ -10,14 +10,26 @@ function App() {
       setStatus('no service worker!')
       return
     }
+    let sw = await navigator.serviceWorker.ready;
+    await sw.pushManager.getSubscription()
+      .then(res => {
+        if (res) {
+          console.log('unsubscribe!')
+          res.unsubscribe()
+            .then(res => console.log(res))
+            .catch(err => console.log(err))
+          // set delete request to backend
+        } else {
+          console.log('subscribe!')
+        }
+      })
     const vapidKeys = webpush.generateVAPIDKeys()
     console.log(vapidKeys)
-    let sw = await navigator.serviceWorker.ready;
     await sw.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: vapidKeys.publicKey
     }).then(res => {
-      const serverData = JSON.stringify(res)
+      const serverData = res.toJSON();
       console.log(serverData);
       sendData({
         endpoint: serverData.endpoint,
