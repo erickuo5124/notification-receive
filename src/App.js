@@ -42,6 +42,7 @@ function App() {
 
   }
   const sendData = async (data) => {
+    // await fetch('http://localhost:5000/add',
     await fetch(`${process.env.REACT_APP_MAIN_HOST}/add`,
       {
         method: 'POST',
