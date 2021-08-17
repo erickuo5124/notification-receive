@@ -1,16 +1,17 @@
 import logo from './logo.svg';
 import './App.css';
-import { useState } from 'react';
-import webpush from 'web-push'
+import { useState, useEffect } from 'react';
 
 function App() {
   const [status, setStatus] = useState('');
-  async function subscribe() {
+  const [VAPIDKey, setVAPIDKey] = useState('');
+  const subscribe = async () => {
     if (!('serviceWorker' in navigator)) {
       setStatus('no service worker!')
       return
     }
-    let sw = await navigator.serviceWorker.ready;
+    const sw = await navigator.serviceWorker.ready;
+    // check current subscription info
     await sw.pushManager.getSubscription()
       .then(res => {
         if (res) {
@@ -18,42 +19,54 @@ function App() {
           res.unsubscribe()
             .then(res => console.log(res))
             .catch(err => console.log(err))
-          // set delete request to backend
         } else {
           console.log('subscribe!')
         }
       })
-    const vapidKeys = webpush.generateVAPIDKeys()
-    console.log(vapidKeys)
+    getKey()
+  }
+  const getKey = async () => {
+    // await fetch(`${process.env.REACT_APP_MAIN_HOST}/key`,
+    await fetch(`http://localhost:5000/key`)
+      .then(res => res.text()
+        .then(res => setVAPIDKey(res))
+      )
+      .catch(err => console.log(err))
+  }
+  const getPushSubscription = async () => {
+    const sw = await navigator.serviceWorker.ready;
+    // generate subscription by VAPID key
     await sw.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: vapidKeys.publicKey
+      applicationServerKey: VAPIDKey
     }).then(res => {
-      const serverData = res.toJSON();
-      console.log(serverData);
-      sendData({
-        endpoint: serverData.endpoint,
-        p256dh: serverData.keys.p256dh,
-        auth: serverData.keys.auth,
-        private_key: vapidKeys.privateKey
-      })
+      const subscription_info = res.toJSON();
+      sendSubscriptionInfo(subscription_info);
     })
       .catch(err => console.log(err))
-
   }
-  const sendData = async (data) => {
-    // await fetch('http://localhost:5000/add',
-    await fetch(`${process.env.REACT_APP_MAIN_HOST}/add`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      }
-    ).then(res => console.log(res))
+
+  const sendSubscriptionInfo = async (data) => {
+    await fetch(`http://localhost:5000/add`, {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    }).then(res => console.log(res))
       .catch(err => console.log(err))
   }
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) {
+      setStatus('no service worker!')
+      return
+    } else if (!VAPIDKey) {
+      return
+    }
+    getPushSubscription()
+  }, [VAPIDKey])
+
   return (
     <div className="App">
       <header className="App-header">
